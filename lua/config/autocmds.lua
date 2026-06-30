@@ -20,4 +20,3 @@ vim.api.nvim_create_autocmd("BufReadPre", {
   end,
 })
 
--- nvim-autosync round-trip test marker
