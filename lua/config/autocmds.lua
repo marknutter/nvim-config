@@ -19,3 +19,5 @@ vim.api.nvim_create_autocmd("BufReadPre", {
     vim.opt_local.swapfile = false
   end,
 })
+
+-- nvim-autosync round-trip test marker
