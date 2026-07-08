@@ -5,6 +5,21 @@
 -- Requires the `gh` CLI to be authenticated (`gh auth status`). On a machine where
 -- gh isn't logged in, octo's commands will error until you `gh auth login`.
 return {
+  -- LazyVim's snacks-picker spec also claims <leader>gi/gI/gp for its own
+  -- read-only gh:// pickers (Snacks.picker.gh_issue / gh_pr). Two plugins on
+  -- one key is a first-registrant-wins race in lazy.nvim's key handler, so the
+  -- octo bindings below only won the key on some sessions. Setting the key to
+  -- `false` removes snacks' claim entirely, making octo the sole, deterministic
+  -- owner. <leader>gP is left alone: octo doesn't bind it, so the snacks
+  -- "all PRs" picker stays available there.
+  {
+    "folke/snacks.nvim",
+    keys = {
+      { "<leader>gi", false },
+      { "<leader>gI", false },
+      { "<leader>gp", false },
+    },
+  },
   {
     "pwntester/octo.nvim",
     cmd = "Octo",
