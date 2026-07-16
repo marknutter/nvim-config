@@ -39,6 +39,45 @@ return {
       enable_builtin = true,
     },
     config = function(_, opts)
+      -- Octo buffers must not use a swap file (E325 ATTENTION on open).
+      --
+      -- octo builds its buffers with `nvim_create_buf(true, false)` (init.lua:377)
+      -- -- listed, NOT scratch -- so 'swapfile' stays on from the global default,
+      -- and `configure()` never turns it off. Every issue you open therefore
+      -- writes ~/.local/state/nvim/swap/octo:%%owner%repo%issue%N.swp.
+      --
+      -- That swap is worse than useless here: an octo buffer is a `buftype=acwrite`
+      -- view whose contents are re-fetched from the GitHub API on every open, so
+      -- there is never anything to recover. But it still collides. Open the same
+      -- issue in a second nvim (or leave one behind after an unclean exit) and the
+      -- next open finds a swap belonging to another process and raises the E325
+      -- "found a swap file" prompt. octo renders inside a vim.schedule callback,
+      -- which cannot show an interactive prompt, so the prompt surfaces as
+      -- `Vim:E325: ATTENTION` thrown out of nvim_buf_set_lines and the issue
+      -- never renders at all.
+      --
+      -- FileType is the load-bearing hook: octo's configure() runs `setlocal
+      -- filetype=octo` before render_issue() writes any lines, and the swap is
+      -- only consulted on that first modification -- so this lands in time and the
+      -- buffer never touches a swap file. Because it never claims one, a swap held
+      -- by another nvim instance is left intact rather than deleted. BufFilePost
+      -- covers the `:file octo://...` rename on the picker path and BufAdd covers
+      -- `:e octo://...`; both are belt-and-braces ahead of FileType.
+      local no_swap_grp = vim.api.nvim_create_augroup("octo_no_swapfile", { clear = true })
+      local function disable_swapfile(ev)
+        vim.bo[ev.buf].swapfile = false
+      end
+      vim.api.nvim_create_autocmd({ "BufAdd", "BufFilePost" }, {
+        group = no_swap_grp,
+        pattern = "octo://*",
+        callback = disable_swapfile,
+      })
+      vim.api.nvim_create_autocmd("FileType", {
+        group = no_swap_grp,
+        pattern = "octo",
+        callback = disable_swapfile,
+      })
+
       require("octo").setup(opts)
 
       -- One-keypress checkbox toggle + push, scoped to octo buffers only.
