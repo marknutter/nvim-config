@@ -14,9 +14,17 @@ vim.g.clipboard = {
     ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
     ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
   },
+  -- Paste reads nvim's own last yank instead of asking the terminal. Reading the
+  -- clipboard over OSC 52 needs the terminal to reply, and mosh/zellij never pass
+  -- that reply back, so `p` hung on "Waiting for OSC 52 response". To paste from
+  -- the Mac's clipboard, use Cmd+V (the terminal types it in).
   paste = {
-    ["+"] = require("vim.ui.clipboard.osc52").paste("+"),
-    ["*"] = require("vim.ui.clipboard.osc52").paste("*"),
+    ["+"] = function()
+      return vim.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"')
+    end,
+    ["*"] = function()
+      return vim.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"')
+    end,
   },
 }
 vim.opt.clipboard = "unnamedplus"
